@@ -17,10 +17,12 @@ public class HelloAdapter {
 
   @HystrixCommand(fallbackMethod = "degradedHello")
   public String callHello() {
+    System.out.println("call hello api {correlationId: " + CorrelationIdRequestContext.get() + "}");
     return this.restTemplate.getForObject(URI.create("http://localhost:8090/hello"), String.class);
   }
 
   private String degradedHello() {
+    System.out.println("going to degraded hello {correlationId: " + CorrelationIdRequestContext.get() + "}");
     return "...degraded hello...";
   }
 
