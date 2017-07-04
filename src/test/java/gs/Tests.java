@@ -1,6 +1,6 @@
 package gs;
 
-import gs.HelloAdapter;
+import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +18,21 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
 
+/**
+ * resources:
+ * https://jfconavarrete.wordpress.com/2014/09/15/make-spring-security-context-available-inside-a-hystrix-command/
+ * https://github.com/Netflix/Hystrix/wiki/Plugins
+ * https://github.com/Netflix/Hystrix/issues/92
+ * https://dzone.com/articles/implementing-correlation-ids-0
+ *
+ * TODO : initialize hystrixRequestContext in a filter (with shutdown)
+ * TODO : configure log to output correlationId implicitly MCD ??
+ *
+ * @ConfigurationProperties
+ * gestion des dépendances facilitée ???? pas besoin de préciser la version, au moins avec graddle
+ *
+ */
+
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class Tests {
@@ -30,14 +45,22 @@ public class Tests {
     @Autowired
     private HelloAdapter adapter;
 
+    private HystrixRequestContext hystrixRequestContext;
+
     @Before
     public void setup() {
+
+        hystrixRequestContext = HystrixRequestContext.initializeContext();
+
+        CorrelationIdRequestContext.set("1234");
+
         mockServer = MockRestServiceServer.createServer(rest);
     }
 
     @After
     public void teardown() {
         mockServer = null;
+        hystrixRequestContext.shutdown();
     }
 
     @Test
