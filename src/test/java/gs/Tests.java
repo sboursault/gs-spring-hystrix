@@ -1,6 +1,5 @@
 package gs;
 
-import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,9 +27,12 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * TODO : initialize hystrixRequestContext in a filter (with shutdown)
  * TODO : configure log to output correlationId implicitly MCD ??
  *
+<<<<<<< HEAD
  * @ConfigurationProperties
  * gestion des dépendances facilitée ???? pas besoin de préciser la version, au moins avec graddle
  *
+=======
+>>>>>>> origin/master
  */
 
 @RunWith(SpringRunner.class)
@@ -45,14 +47,11 @@ public class Tests {
     @Autowired
     private HelloAdapter adapter;
 
-    private HystrixRequestContext hystrixRequestContext;
 
     @Before
     public void setup() {
 
-        hystrixRequestContext = HystrixRequestContext.initializeContext();
-
-        CorrelationIdRequestContext.set("1234");
+        //CorrelationIdRequestContext.set("1234"); correlationId should be passed through the inbound
 
         mockServer = MockRestServiceServer.createServer(rest);
     }
@@ -60,7 +59,6 @@ public class Tests {
     @After
     public void teardown() {
         mockServer = null;
-        hystrixRequestContext.shutdown();
     }
 
     @Test
