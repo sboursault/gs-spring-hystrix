@@ -1,4 +1,4 @@
-package gs;
+package gs.hystrixcontext;
 
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestVariableDefault;
 

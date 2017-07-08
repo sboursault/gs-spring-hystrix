@@ -6,15 +6,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.TEXT_PLAIN;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
 
 /**
@@ -27,33 +27,28 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * TODO : initialize hystrixRequestContext in a filter (with shutdown)
  * TODO : configure log to output correlationId implicitly MCD ??
  *
-<<<<<<< HEAD
  * @ConfigurationProperties
  * gestion des dépendances facilitée ???? pas besoin de préciser la version, au moins avec graddle
  *
-=======
->>>>>>> origin/master
+ * revoir gestion des exceptions avec hystrix, jeter une checked exception si indispo ?
+ *
  */
 
 @RunWith(SpringRunner.class)
-@SpringBootTest
-public class Tests {
+@SpringBootTest(webEnvironment= SpringBootTest.WebEnvironment.RANDOM_PORT)
+public class DemoTests {
 
     private MockRestServiceServer mockServer;
 
     @Autowired
-    private RestTemplate rest;
+    private RestTemplate restTemplate;
 
     @Autowired
-    private HelloAdapter adapter;
-
+    private TestRestTemplate testRestTemplate;
 
     @Before
     public void setup() {
-
-        //CorrelationIdRequestContext.set("1234"); correlationId should be passed through the inbound
-
-        mockServer = MockRestServiceServer.createServer(rest);
+        mockServer = MockRestServiceServer.bindTo(restTemplate).build();
     }
 
     @After
@@ -64,21 +59,26 @@ public class Tests {
     @Test
     public void nominal() {
 
-        mockServer.expect(requestTo("http://localhost:8090/hello"))
-                .andRespond(withSuccess("Hello, World!", TEXT_PLAIN));
+        mockServer.expect(requestTo("http://remote/service"))
+                .andRespond(withSuccess("12:00", TEXT_PLAIN));
 
-        String actualResult = adapter.callHello();
+        httpGet("/demo");
 
-        assertThat(actualResult).isEqualTo("Hello, World!");
+        mockServer.verify();
     }
 
     @Test
     public void degraded() {
-        mockServer.expect(requestTo("http://localhost:8090/hello"))
-                .andRespond(withUnauthorizedRequest());
 
-        String actualResult = adapter.callHello();
+        mockServer.expect(requestTo("http://remote/service"))
+                .andRespond(withServerError());
 
-        assertThat(actualResult).isEqualTo("...degraded hello...");
+        httpGet("/demo");
+
+        mockServer.verify();
+    }
+
+    private void httpGet(String url) {
+        testRestTemplate.getForObject(url, String.class);
     }
 }
