@@ -1,19 +1,24 @@
 package gs;
 
-import org.junit.After;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import static org.springframework.http.MediaType.TEXT_PLAIN;
+import java.util.Map;
+
+import static org.hamcrest.core.IsAnything.anything;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 
@@ -29,8 +34,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  *
  * @ConfigurationProperties
  * gestion des dépendances facilitée ???? pas besoin de préciser la version, au moins avec graddle
- *
- * revoir gestion des exceptions avec hystrix, jeter une checked exception si indispo ?
  *
  */
 
@@ -51,34 +54,48 @@ public class DemoTests {
         mockServer = MockRestServiceServer.bindTo(restTemplate).build();
     }
 
-    @After
-    public void teardown() {
-        mockServer = null;
-    }
-
     @Test
-    public void nominal() {
+    public void correlationIdIsPassedAccrossServices() {
 
         mockServer.expect(requestTo("http://remote/service"))
-                .andRespond(withSuccess("12:00", TEXT_PLAIN));
+                .andExpect(header("X-Correlation-ID", "123e4567-e89b-12d3-a456-426655440000"))
+                .andRespond(withSuccess());
 
-        httpGet("/demo");
+        httpGet("/demo", headers("X-Correlation-ID", "123e4567-e89b-12d3-a456-426655440000"));
 
         mockServer.verify();
     }
 
     @Test
-    public void degraded() {
+    public void correlationIdIsGeneratedIfNotProvided() {
 
         mockServer.expect(requestTo("http://remote/service"))
-                .andRespond(withServerError());
+                .andExpect(header("X-Correlation-ID", anything()))
+                .andRespond(withSuccess());
 
-        httpGet("/demo");
+        httpGet("/demo", noHeaders());
 
         mockServer.verify();
     }
 
-    private void httpGet(String url) {
-        testRestTemplate.getForObject(url, String.class);
+    // helpers
+
+    private HttpHeaders noHeaders() {
+        return new HttpHeaders();
+    }
+
+    private HttpHeaders headers(String key, String value)  {
+        return headers(ImmutableMap.of(key, value));
+    }
+
+    private HttpHeaders headers(Map<String, String> map)  {
+        HttpHeaders requestHeaders = new HttpHeaders();
+        map.entrySet().stream()
+                .forEach(entry -> requestHeaders.add(entry.getKey(), entry.getValue()));
+        return requestHeaders;
+    }
+
+    private void httpGet(String url, HttpHeaders headers) {
+        testRestTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
 }

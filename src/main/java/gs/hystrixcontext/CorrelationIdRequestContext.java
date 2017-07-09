@@ -6,6 +6,8 @@ import com.netflix.hystrix.strategy.concurrency.HystrixRequestVariableDefault;
  * Holder for the HystrixRequestVariableDefault instance that contains the correlationId.
  */
 public class CorrelationIdRequestContext {
+
+    public final static String HTTP_HEADER = "X-Correlation-ID";
  
     private static final HystrixRequestVariableDefault<String> requestVariable = new HystrixRequestVariableDefault<>();
  
