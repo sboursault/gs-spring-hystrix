@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DemoRestController {
 
     @Autowired
-    private RemoteServiceAdapter helloAdapter;
+    private RemoteServiceAdapter adapter;
 
     @RequestMapping("/demo")
     public void demo() {
-        helloAdapter.callRemote();
+        adapter.callRemote();
     }
 
 }
