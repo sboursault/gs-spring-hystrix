@@ -29,7 +29,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * https://github.com/Netflix/Hystrix/issues/92
  * https://dzone.com/articles/implementing-correlation-ids-0
  *
- * TODO : initialize hystrixRequestContext in a filter (with shutdown)
  * TODO : configure log to output correlationId implicitly MCD ??
  *
  * @ConfigurationProperties
@@ -54,29 +53,39 @@ public class DemoTests {
         mockServer = MockRestServiceServer.bindTo(restTemplate).build();
     }
 
+    // tag::correlation_ID_is_passed_accross_services[]
     @Test
-    public void correlationIdIsPassedAccrossServices() {
+    public void correlation_ID_is_passed_accross_services() {
 
+        // initialize mock server, expecting a request with a specific correlation ID
         mockServer.expect(requestTo("http://remote/service"))
                 .andExpect(header("X-Correlation-ID", "123e4567-e89b-12d3-a456-426655440000"))
                 .andRespond(withSuccess());
 
+        // call demo with correlation ID
         httpGet("/demo", headers("X-Correlation-ID", "123e4567-e89b-12d3-a456-426655440000"));
 
+        // verify expectations
         mockServer.verify();
     }
+    // end::correlation_ID_is_passed_accross_services[]
 
+    // tag::correlation_ID_is_generated_if_missing[]
     @Test
-    public void correlationIdIsGeneratedIfNotProvided() {
+    public void correlation_ID_is_generated_if_missing() {
 
+        // initialize mock server, expecting a request with any correlation ID
         mockServer.expect(requestTo("http://remote/service"))
                 .andExpect(header("X-Correlation-ID", anything()))
                 .andRespond(withSuccess());
 
+        // call demo without correlation ID
         httpGet("/demo", noHeaders());
 
+        // verify expectations
         mockServer.verify();
     }
+    // end::correlation_ID_is_generated_if_missing[]
 
     // helpers
 
