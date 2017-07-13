@@ -53,9 +53,8 @@ public class DemoTests {
         mockServer = MockRestServiceServer.bindTo(restTemplate).build();
     }
 
-    // tag::correlation_ID_is_passed_accross_services[]
     @Test
-    public void correlation_ID_is_passed_accross_services() {
+    public void correlation_ID_is_passed_across_services() {
 
         // initialize mock server, expecting a request with a specific correlation ID
         mockServer.expect(requestTo("http://remote/service"))
@@ -68,9 +67,7 @@ public class DemoTests {
         // verify expectations
         mockServer.verify();
     }
-    // end::correlation_ID_is_passed_accross_services[]
 
-    // tag::correlation_ID_is_generated_if_missing[]
     @Test
     public void correlation_ID_is_generated_if_missing() {
 
@@ -85,7 +82,6 @@ public class DemoTests {
         // verify expectations
         mockServer.verify();
     }
-    // end::correlation_ID_is_generated_if_missing[]
 
     // helpers
 

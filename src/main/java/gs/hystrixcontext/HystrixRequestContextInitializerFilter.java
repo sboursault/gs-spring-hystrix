@@ -14,32 +14,47 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * ServletFilter for initializing HystrixRequestContext at the beginning of an HTTP request and shutting down at the end:
+ * <p>ServletFilter for initializing HystrixRequestContext at the beginning of an HTTP
+ * request and shutting down at the end.</p>
  *
- * The filter shuts down the HystrixRequestContext at the end of the request to avoid
- * leakage into subsequent requests.
+ * <p>If a http header contains a request correlation ID, it is stored as an hystrix request
+ * variable, otherwise an ID is generated.</p>
+ *
+ * <p>The correlation ID is then put in the thread logging context.</p>
  */
 @Component
 public class HystrixRequestContextInitializerFilter implements Filter {
  
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+
+        // initialize hystrix context
         HystrixRequestContext context = HystrixRequestContext.initializeContext();
+
+        // get correlation ID from header or generate one
         String correlationId = null;
         if (request instanceof HttpServletRequest) {
-            correlationId = ((HttpServletRequest) request).getHeader(CorrelationIdRequestContext.HTTP_HEADER);
+            correlationId = ((HttpServletRequest) request).getHeader(CorrelationId.HTTP_HEADER);
         }
         if (correlationId == null) {
             correlationId = UUID.randomUUID().toString();
         }
-        CorrelationIdRequestContext.set(correlationId);
+
+        // keep correlation ID as an hystrix request variable
+        CorrelationId.set(correlationId);
+
+        // update thread logging context with the correlation id
+        CorrelationId.fillThreadDiagnosticContext();
+
+        // resolve filter chain
         try {
             chain.doFilter(request, response);
         } finally {
+            // close hystrix context
             context.close();
         }
     }
- 
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {}
  

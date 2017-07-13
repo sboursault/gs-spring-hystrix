@@ -9,15 +9,16 @@ import java.io.IOException;
 import java.util.Collections;
 
 /**
- * Created by sboursault on 7/9/17.
+ *
+ * <p>ClientHttpRequestInterceptor to add the correlation ID header on outgoing requests.</p>
  */
-public class AddCorrelationIdHeaderInterceptor implements ClientHttpRequestInterceptor {
+public class AddCorrelationIdHttpHeaderInterceptor implements ClientHttpRequestInterceptor {
 
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-        String correlationId = CorrelationIdRequestContext.get();
+        String correlationId = CorrelationId.get();
         if (correlationId != null) {
-            request.getHeaders().put(CorrelationIdRequestContext.HTTP_HEADER, Collections.singletonList(correlationId));
+            request.getHeaders().put(CorrelationId.HTTP_HEADER, Collections.singletonList(correlationId));
         }
         return execution.execute(request, body);
     }

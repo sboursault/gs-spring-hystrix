@@ -1,0 +1,7 @@
+
+# change logging pattern to include the correlation ID
+# (defaults can be found in spring-boot-1.5.2.RELEASE.jar!/org/springframework/boot/logging/logback/defaults.xml)
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%X{correlationId}] [%thread] %level %logger{39} - %msg%n"
+
