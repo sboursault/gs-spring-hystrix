@@ -1,6 +1,7 @@
 package gs.hystrixcontext;
 
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.Filter;
@@ -33,13 +34,14 @@ public class HystrixRequestContextInitializerFilter implements Filter {
             correlationId = UUID.randomUUID().toString();
         }
         CorrelationIdRequestContext.set(correlationId);
+        CorrelationIdLoggingContext.initialize();
         try {
             chain.doFilter(request, response);
         } finally {
             context.close();
         }
     }
- 
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {}
  
