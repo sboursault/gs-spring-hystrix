@@ -1,41 +1,28 @@
 = spring-hystrix-correlation-id
 
-correlation ID implementation with Spring and Hystrix
+correlation ID implementation with Spring and Hystrix-Javanica
+
+NOTE: As a prerequisite, the reader should have a basic understanding of Spring and the Hystrix circuit-breaker.
 
 == What is a correlation ID ?
 
-When working with micro-services, tracing the root cause of an issue can quickly become a headache.
-Requests are passed from a system to another, and a simple stack trace may not bear the information you need.
+When working with micro-services, tracing the root cause of an issue may not be easy.
+Processing a request may involve sub-requests to other applications, which in turn generate their own sub-requests.
 
-The correlation ID is a simple diagnostic tool.
-Basically, we assign a unique identifier to each request and the sub-requests to resolve this transaction will bear this identifier.
- which involves requests going through several sub systems is assigned a correlation ID.
-This unique identifier is passed along with  for a business transaction across several sub systems.
-This identifier is shared across several systems so that each system can print logs with this correlation ID.
-
-This way, it's possible to aggregate all the logs related to a single business transaction.
+This is where a correlation ID can help.
+A correlation ID is a unique identifier attached to all the requests performed to resolve a higher level request.
+If all the applications print logs with this ID, we can aggregate all the logs related to a higher level request.
 
 This practice is sometimes refered as "distributed tracing".
 
 == How does it work ?
 
-A simple solution is to pass the correlation ID from one system to another as a http header.
+Two rules allow the propagation of correlation IDs:
 
-== How does it work with Hystrix ?
- 
-ThreadLocal won't do
-the correlation-id is a cross-cuting concern. We don't want to add noise to our business code.
-
-== And now the code
-
-=== Tests
-2 tests demonstrate that:
-
-* the correlation is passed accross services
-* it is generated if not provided by the caller
+. When an application receives a request with a correlation ID header, this ID should be sent with any outgoing sub requests.
+This is demonstrated by `DemoTests.correlation_ID_is_passed_across_services()`.
 
 [source,java]
-.DemoTests.java
 ----
 @Test
 public void correlation_ID_is_passed_across_services() {
@@ -52,6 +39,9 @@ public void correlation_ID_is_passed_across_services() {
     mockServer.verify();
 }
 ----
+
+[start=2]
+. If no correlation ID was provided by the caller, it must be generated. This is demonstrated by `DemoTests.correlation_ID_is_generated_if_missing()`.
 
 [source,java]
 ----
@@ -71,7 +61,74 @@ public void correlation_ID_is_generated_if_missing() {
 }
 ----
 
-[caption="Several threads are involved but the correlation ID is unchanged"]image::logs.jpg[]
+=== Guidelines
+
+As a guideline, we don't want to pollute our business code with cross cutting concerns.
+So the correlation ID implementation should be isolated from the rest of the code.
+
+In the following code, we couldn't guess that a correlation ID is passed along with each requests.
+
+[source,java]
+.DemoRestController.java
+----
+@RestController
+public class DemoRestController {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(DemoRestController.class);
+
+    @Autowired
+    private RemoteServiceAdapter adapter;
+
+    @GetMapping("/demo")
+    public void demo() {
+        LOGGER.info("start processing GET /demo");
+        // call hystrix command
+        adapter.callRemote();
+        LOGGER.info("end processing GET /demo");
+    }
+}
+----
+[source,java]
+.RemoteServiceAdapter.java
+----
+@Service
+public class RemoteServiceAdapter {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(RemoteServiceAdapter.class);
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @HystrixCommand
+    public void callRemote() {
+        LOGGER.info("call remote service");
+        restTemplate.getForObject(URI.create("http://remote/service"), String.class);
+    }
+
+}
+----
+
+=== Implementation
+
+A first idea to store context related data, is to use a `ThreadLocal` variable.
+Unfortunately, this won't work with Hystrix's default isolation strategy, where a separate thread is used to resolve a Hystrix command.
+
+Alternatively, we can use a `HystrixRequestVariable`.
+As explained in the javadoc: a HystrixRequestVariable is "similar to ThreadLocal but scoped at the user request level."
+
+So, when the Demo application receives a request, the `HystrixRequestContextInitializerFilter` reads the correlation ID and keeps it as a `HystrixRequestVariable`.
+If the correlation ID isn't provided, a random one is generated.
+This filter also put the correlation ID in the diagnostic context, so that it can be printed with logs.
+
+To propagate the diagnostic context on Hystrix command's thread, a hook is registered: `AddCorrelationIdToDiagnosticContext`.
+
+To finish, we still need to add the correlation ID to outgoing requests.
+In HystrixConfiguration, a RestTemplate is defined with an interceptor to add the correlation ID to outgoing requests.
+
+And that's it.
+When running `DemoTests.correlation_ID_is_passed_across_services()`, we can see the correlation ID logged on each line, even though several threads are involved.
+
+image::logs.png[]
 
 == resources
 
