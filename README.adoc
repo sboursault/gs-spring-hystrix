@@ -4,9 +4,14 @@ correlation ID implementation with Spring and Hystrix
 
 == What is a correlation ID ?
 
-When working with micro-services, tracing the root cause of an issue can quickly become a headache. Requests are passed from a system to another, and a simple stack trace may not bear the information you need.
+When working with micro-services, tracing the root cause of an issue can quickly become a headache.
+Requests are passed from a system to another, and a simple stack trace may not bear the information you need.
 
-The correlation ID is a simple diagnostic tool. Basically, it's a unique identifier for a business transaction (WHAT IS A BUSINESS TRANSACTION). This identifier is shared across several systems so that each system can print logs with this correlation ID.
+The correlation ID is a simple diagnostic tool.
+Basically, we assign a unique identifier to each request and the sub-requests to resolve this transaction will bear this identifier.
+ which involves requests going through several sub systems is assigned a correlation ID.
+This unique identifier is passed along with  for a business transaction across several sub systems.
+This identifier is shared across several systems so that each system can print logs with this correlation ID.
 
 This way, it's possible to aggregate all the logs related to a single business transaction.
 
@@ -32,13 +37,41 @@ the correlation-id is a cross-cuting concern. We don't want to add noise to our 
 [source,java]
 .DemoTests.java
 ----
-include::src/test/java/gs/DemoTests.java[tags=correlation_ID_is_passed_accross_services]
+@Test
+public void correlation_ID_is_passed_across_services() {
+
+    // initialize mock server, expecting a request with a specific correlation ID
+    mockServer.expect(requestTo("http://remote/service"))
+            .andExpect(header("X-Correlation-ID", "123e4567-e89b-12d3-a456-426655440000"))
+            .andRespond(withSuccess());
+
+    // call demo with correlation ID
+    httpGet("/demo", headers("X-Correlation-ID", "123e4567-e89b-12d3-a456-426655440000"));
+
+    // verify expectations
+    mockServer.verify();
+}
 ----
 
 [source,java]
 ----
-include::src/test/java/gs/DemoTests.java[tags=correlation_ID_is_generated_if_missing]
+@Test
+public void correlation_ID_is_generated_if_missing() {
+
+    // initialize mock server, expecting a request with any correlation ID
+    mockServer.expect(requestTo("http://remote/service"))
+            .andExpect(header("X-Correlation-ID", anything()))
+            .andRespond(withSuccess());
+
+    // call demo without correlation ID
+    httpGet("/demo", noHeaders());
+
+    // verify expectations
+    mockServer.verify();
+}
 ----
+
+[caption="Several threads are involved but the correlation ID is unchanged"]image::logs.jpg[]
 
 == resources
 

@@ -21,21 +21,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-
-/**
- * resources:
- * https://jfconavarrete.wordpress.com/2014/09/15/make-spring-security-context-available-inside-a-hystrix-command/
- * https://github.com/Netflix/Hystrix/wiki/Plugins
- * https://github.com/Netflix/Hystrix/issues/92
- * https://dzone.com/articles/implementing-correlation-ids-0
- *
- * TODO : configure log to output correlationId implicitly MCD ??
- *
- * @ConfigurationProperties
- * gestion des dépendances facilitée ???? pas besoin de préciser la version, au moins avec graddle
- *
- */
-
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment= SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class DemoTests {
