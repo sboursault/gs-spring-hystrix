@@ -23,7 +23,7 @@ public class RemoteServiceAdapter {
     @HystrixCommand
     public void callRemote() {
         LOGGER.info("call remote service");
-        restTemplate.getForObject(URI.create("http://remote/service"), String.class);
+        restTemplate.getForObject("http://remote/service", String.class);
     }
 
 }
